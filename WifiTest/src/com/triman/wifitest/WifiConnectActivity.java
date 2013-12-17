@@ -3,11 +3,19 @@ package com.triman.wifitest;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+
+import com.triman.wifitest.utils.netty.MessageClient;
+
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.NetworkInfo;
 import android.net.wifi.ScanResult;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
@@ -15,6 +23,7 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.WifiManager.WifiLock;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -34,6 +43,9 @@ public class WifiConnectActivity extends Activity {
 	private List<ScanResult> wifiList;
 	private List<String> passableAp;
 	private int wcgId;
+	private MessageClient messageClient;
+	private Channel channel;
+	private Handler handler = new Handler();
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +55,9 @@ public class WifiConnectActivity extends Activity {
 		wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 		
 		connect = (Button) findViewById(R.id.start_connect_ap);
+		
+		messageClient = new MessageClient();
+		
 		connect.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -52,6 +67,7 @@ public class WifiConnectActivity extends Activity {
 					isConnecting = false;
 					connect.setText(R.string.start_connect_ap);
 					wifiManager.setWifiEnabled(false);
+					stopClient();
 					if(wifiLock != null){
 						wifiLock.release();
 						wifiLock = null;
@@ -123,6 +139,42 @@ public class WifiConnectActivity extends Activity {
 		return apConfig;
 	}
 	
+	private void startClient(String host, int port){
+		final ChannelFuture channelFuture = messageClient.start(host, port);
+		channelFuture.awaitUninterruptibly();
+		if(channelFuture.isSuccess()){
+			handler.post(new Runnable() {
+				
+				@Override
+				public void run() {
+					Builder dialog = new AlertDialog.Builder(WifiConnectActivity.this);
+					dialog.setTitle("提示");
+					dialog.setMessage("成功启动服务器");
+					dialog.setNegativeButton("确定", null);
+					dialog.show();
+					channel = channelFuture.getChannel();
+				}
+			});
+		} else {
+			handler.post(new Runnable() {
+				@Override
+				public void run() {
+					Builder dialog = new AlertDialog.Builder(WifiConnectActivity.this);
+					dialog.setTitle("提示");
+					dialog.setMessage("启动服务器失败");
+					dialog.setNegativeButton("确定", null);
+					dialog.show();
+					stopClient();
+				}
+			});
+		}
+	}
+	
+	private void stopClient(){
+		channel = null;
+		messageClient.shutdown();
+	}
+	
 	private final class WifiBroadcastReceiver extends BroadcastReceiver{
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -167,8 +219,54 @@ public class WifiConnectActivity extends Activity {
 	                    str = "未初始化";
 	                }
 	                Log.v(TAG, info.getSSID() + "的当前状态：" + str);
+				} else if(action.equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)){
+					String str = null;
+					NetworkInfo networkInfo = intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+					NetworkInfo.State nState = networkInfo.getState();
+					switch (nState){
+					case CONNECTED:
+						str = "网络已连接";
+						WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+						final int ip = wifiInfo.getIpAddress();
+						Log.v(TAG, "ip: " + intToIp(ip));
+						Thread t = new Thread(new Runnable() {
+							
+							@Override
+							public void run() {
+								Log.v(TAG, "正在启动客户端");
+								startClient("192.168.43.1", 9090);
+							}
+						});
+						t.start();
+						break;
+					case DISCONNECTED:
+						str = "网络已断开";
+						break;
+					case CONNECTING:
+						str = "网络连接中";
+						break;
+					case DISCONNECTING:
+						str = "网络正在断开中";
+						break;
+					case SUSPENDED:
+						str = "网络已挂起";
+						break;
+					case UNKNOWN:
+						str = "网络状态未知";
+						break;
+						default:break;
+					}
+					Log.v(TAG, "网络当前状态变更为：" + str);
 				}
 			}
+		}
+		private String intToIp(int ipAddress){
+			String ipString = null;
+			if (ipAddress != 0) {
+			       ipString = ((ipAddress & 0xff) + "." + (ipAddress >> 8 & 0xff) + "." 
+					+ (ipAddress >> 16 & 0xff) + "." + (ipAddress >> 24 & 0xff));
+			}
+			return ipString;
 		}
 	}
 }
