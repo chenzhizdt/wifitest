@@ -6,7 +6,9 @@
     <string name="hello_world">Hello world!</string>
     <string name="connect_ap">连接热点</string>
     <string name="start_connect_ap">开始连接热点</string>
-    <string name="start_ap">启动热点</string>
+    <string name="start">启动</string>
     <string name="close_connect_ap">关闭连接热点</string>
+    <string name="preside_meeting">主持会议</string>
+    <string name="attend_meeting">参加会议</string>
 
 </resources>
