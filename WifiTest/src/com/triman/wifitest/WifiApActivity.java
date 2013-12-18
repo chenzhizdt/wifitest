@@ -15,13 +15,12 @@ import android.widget.Button;
 
 public class WifiApActivity extends Activity implements StateChangeListener{
 	
-	private static final String TAG = "MainActivity";
-	
 	private Button start;
 	private State state;
 	private Handler handler = new Handler();
 	private MessageServer messageServer;
 	private WifiApManager wifiApManager;
+	private String name;
 	private enum State {
 		CLOSED,
 		CLOSING,
@@ -40,6 +39,7 @@ public class WifiApActivity extends Activity implements StateChangeListener{
 		messageServer = new MessageServer();
 		wifiApManager = new WifiApManager(this);
 		wifiApManager.setStateChangeListener(this);
+		name = getIntent().getStringExtra(MainActivity.EXTRA_NAME);
 		
 		start.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -47,12 +47,12 @@ public class WifiApActivity extends Activity implements StateChangeListener{
 				switch(state){
 				case CLOSED:
 					changeToOpening();
-					wifiApManager.setWifiApEnabled();
+					wifiApManager.setWifiApEnabled(true);
 					break;
 				case OPENED:
 					changeToClosing();
 					stopServer();
-					wifiApManager.setWifiApDisabled();
+					wifiApManager.setWifiApEnabled(false);
 					break;
 				default:
 					break;
@@ -89,6 +89,8 @@ public class WifiApActivity extends Activity implements StateChangeListener{
 	protected void onResume() {
 		super.onResume();
 		wifiApManager.beginStateChangeListen();
+		changeToOpening();
+		wifiApManager.setWifiApEnabled(true);
 	}
 	
 	@Override
@@ -96,12 +98,12 @@ public class WifiApActivity extends Activity implements StateChangeListener{
 		super.onPause();
 		changeToClosed();
 		stopServer();
-		wifiApManager.setWifiApDisabled();
+		wifiApManager.setWifiApEnabled(false);
 		wifiApManager.endStateChangeListen();
 	}
 	
 	private void startServer(){
-		final ChannelFuture channelFuture = messageServer.start(9090);
+		final ChannelFuture channelFuture = messageServer.start(9090, name);
 		channelFuture.awaitUninterruptibly();
 		if(channelFuture.isSuccess()){
 			handler.post(new Runnable() {
@@ -138,13 +140,15 @@ public class WifiApActivity extends Activity implements StateChangeListener{
 
 	@Override
 	public void onEnabled() {
-		Thread t = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				startServer();
-			}
-		});
-		t.start();
+		if(state == State.OPENING){
+			Thread t = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					startServer();
+				}
+			});
+			t.start();
+		}
 	}
 
 	@Override
@@ -154,17 +158,17 @@ public class WifiApActivity extends Activity implements StateChangeListener{
 
 	@Override
 	public void onFailed() {
-		
+		changeToClosed();
 	}
 
 	@Override
 	public void onDisabled() {
-		stopServer();
 		changeToClosed();
 	}
 
 	@Override
 	public void onDisabling() {
-		
+		changeToClosing();
+		stopServer();
 	}
 }

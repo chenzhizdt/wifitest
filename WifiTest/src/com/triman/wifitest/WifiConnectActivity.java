@@ -46,6 +46,7 @@ public class WifiConnectActivity extends Activity {
 	private MessageClient messageClient;
 	private Channel channel;
 	private Handler handler = new Handler();
+	private String name;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +58,8 @@ public class WifiConnectActivity extends Activity {
 		connect = (Button) findViewById(R.id.start_connect_ap);
 		
 		messageClient = new MessageClient();
+		
+		name = getIntent().getStringExtra(MainActivity.EXTRA_NAME);
 		
 		connect.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -140,7 +143,7 @@ public class WifiConnectActivity extends Activity {
 	}
 	
 	private void startClient(String host, int port){
-		final ChannelFuture channelFuture = messageClient.start(host, port);
+		final ChannelFuture channelFuture = messageClient.start(host, port, name);
 		channelFuture.awaitUninterruptibly();
 		if(channelFuture.isSuccess()){
 			handler.post(new Runnable() {

@@ -53,35 +53,32 @@ public class WifiApManager {
 		}
 	}
 	
-	public boolean setWifiApEnabled() {
-		wifiManager.setWifiEnabled(true);
+	public boolean setWifiApEnabled(boolean enabled) {
+		if (enabled) {
+			wifiManager.setWifiEnabled(false);
+		}
 		try {
 			Method method = wifiManager.getClass().getMethod(
 					"setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
-			return (Boolean) method.invoke(wifiManager, apConfig, true);
+			return (Boolean) method.invoke(wifiManager, apConfig, enabled);
 		} catch (Exception e) {
 			return false;
 		}
 	}
-
-	public boolean setWifiApDisabled() {
-		wifiManager.setWifiEnabled(false);
-		return true;
-	}
 	
 	public void beginStateChangeListen(){
-		mActivity.unregisterReceiver(receiver);
+		mActivity.registerReceiver(receiver, filter);
 	}
 	
 	public void endStateChangeListen(){
-		mActivity.registerReceiver(receiver, filter);
+		mActivity.unregisterReceiver(receiver);
 	}
 	
 	public int getState(){
 		return state;
 	}
 	
-	class WifiApBroadcastReceiver extends BroadcastReceiver {
+	private class WifiApBroadcastReceiver extends BroadcastReceiver {
 
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -91,22 +88,27 @@ public class WifiApManager {
 			switch (wifiApState) {
 			case WIFI_AP_STATE_DISABLED:
 				str = "已经关闭";
+				state = WIFI_AP_STATE_DISABLED;
 				listener.onDisabled();
 				break;
 			case WIFI_AP_STATE_DISABLING:
 				str = "正在关闭";
+				state = WIFI_AP_STATE_DISABLING;
 				listener.onDisabling();
 				break;
 			case WIFI_AP_STATE_ENABLED:
 				str = "已经打开";
+				state = WIFI_AP_STATE_ENABLED;
 				listener.onEnabled();
 				break;
 			case WIFI_AP_STATE_ENABLING:
 				str = "正在打开";
+				state = WIFI_AP_STATE_ENABLING;
 				listener.onEnabling();
 				break;
 			case WIFI_AP_STATE_FAILED:
 				str = "打开失败";
+				state = WIFI_AP_STATE_FAILED;
 				listener.onFailed();
 				break;
 			default:
