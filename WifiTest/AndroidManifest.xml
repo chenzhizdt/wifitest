@@ -32,6 +32,7 @@
             </intent-filter>
         </activity>
         <activity android:name="com.triman.wifitest.WifiConnectActivity"/>
+        <activity android:name="com.triman.wifitest.WifiApActivity"/>
     </application>
 
 </manifest>
