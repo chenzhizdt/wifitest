@@ -2,6 +2,7 @@ package com.triman.wifitest.utils.netty;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ChildChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -18,6 +19,14 @@ public class ServerMessageHandler extends SimpleChannelHandler{
 	}
 	
 	@Override
+	public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e)
+			throws Exception {
+		Connection c = ConnectionManager.getInstance().getConnection(Integer.parseInt(ctx.getChannel().getAttachment().toString()));
+		ConnectionManager.getInstance().removeConnection(c);
+		Log.v(TAG, "Channel closed");
+	}
+	
+	@Override
 	public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e)
 			throws Exception {
 		super.channelConnected(ctx, e);
@@ -27,6 +36,23 @@ public class ServerMessageHandler extends SimpleChannelHandler{
 		message.setConnectionId(c.getId());
 		c.getChannel().write(message);
 		c.getChannel().setAttachment(c.getId());
+		Log.v(TAG, "Channel connected");
+	}
+	
+	@Override
+	public void childChannelClosed(ChannelHandlerContext ctx,
+			ChildChannelStateEvent e) throws Exception {
+		// TODO Auto-generated method stub
+		super.childChannelClosed(ctx, e);
+		Log.v(TAG, "Child channel closed");
+	}
+	
+	@Override
+	public void childChannelOpen(ChannelHandlerContext ctx,
+			ChildChannelStateEvent e) throws Exception {
+		// TODO Auto-generated method stub
+		super.childChannelOpen(ctx, e);
+		Log.v(TAG, "Child channel open");
 	}
 	
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
@@ -39,6 +65,7 @@ public class ServerMessageHandler extends SimpleChannelHandler{
 		} else {
 			Log.v(TAG,"I received message from " + c.getAttachment().toString() + ":" + msg.getMessage());
 		}
+		Log.v(TAG, "Channel received a message");
 	}
 	
 	@Override
@@ -46,6 +73,7 @@ public class ServerMessageHandler extends SimpleChannelHandler{
 			ChannelStateEvent e) throws Exception {
 		Connection c = ConnectionManager.getInstance().getConnection(Integer.parseInt(ctx.getChannel().getAttachment().toString()));
 		ConnectionManager.getInstance().removeConnection(c);
+		Log.v(TAG, "Channel disconnected");
 	}
 	
 	@Override
@@ -53,5 +81,6 @@ public class ServerMessageHandler extends SimpleChannelHandler{
 			throws Exception {
 		// TODO Auto-generated method stub
 		super.exceptionCaught(ctx, e);
+		Log.v(TAG, "Channel get a exception");
 	}
 }

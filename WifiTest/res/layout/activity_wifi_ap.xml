@@ -10,14 +10,14 @@
     tools:context=".WifiApActivity" >
 
     <ListView
-        android:id="@+id/listView1"
+        android:id="@+id/lv_participants"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" >
     </ListView>
 
     <Button
-        android:id="@+id/start_ap"
+        android:id="@+id/btn_start_ap"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/start" />

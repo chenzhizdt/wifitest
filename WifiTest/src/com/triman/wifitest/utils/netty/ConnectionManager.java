@@ -14,6 +14,16 @@ public class ConnectionManager {
 	
 	private Map<Integer, Connection> connections = new ConcurrentHashMap<Integer, Connection>();
 	
+	private ConnectionListener connectionListener;
+	
+	public ConnectionListener getConnectionListener() {
+		return connectionListener;
+	}
+
+	public void setConnectionListener(ConnectionListener connectionListener) {
+		this.connectionListener = connectionListener;
+	}
+
 	private ConnectionManager(){}
 	
 	public static final ConnectionManager getInstance(){
@@ -22,7 +32,11 @@ public class ConnectionManager {
 	
 	public Connection newConnection(ChannelHandlerContext ctx) {
 		final Connection c = new Connection(ID_SEQ.incrementAndGet(), ctx);
+		c.setConnectionListener(connectionListener);
 		connections.put(c.getId(), c);
+		if(connectionListener != null){
+			connectionListener.onNewConnection(c);
+		}
 		return c;
 	}
 	
@@ -40,6 +54,9 @@ public class ConnectionManager {
 			old.setAttachment(null);
 		} else {
 			// XXX: error
+		}
+		if(connectionListener != null){
+			connectionListener.onRemoveConnection(old);
 		}
 	}
 	public int getConnectionCount(){

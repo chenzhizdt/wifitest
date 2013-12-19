@@ -9,6 +9,15 @@ public class Connection {
 	private ChannelHandlerContext ctx;
 	private volatile boolean isKilled = false;
 	private Object attachment;
+	private ConnectionListener connectionListener;
+
+	public ConnectionListener getConnectionListener() {
+		return connectionListener;
+	}
+
+	public void setConnectionListener(ConnectionListener connectionListener) {
+		this.connectionListener = connectionListener;
+	}
 
 	public Object getAttachment() {
 		synchronized (readWriteLock) {
@@ -19,6 +28,9 @@ public class Connection {
 	public void setAttachment(Object attachment) {
 		synchronized (readWriteLock) {
 			this.attachment = attachment;
+		}
+		if(connectionListener != null){
+			connectionListener.onStableConnection(this);
 		}
 	}
 	

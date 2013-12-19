@@ -45,6 +45,10 @@ public class MessageClient {
 	
 	public void shutdown(){
 		if(bootstrap != null){
+			if(channel != null){
+				channel.disconnect();
+				channel.close();
+			}
 			bootstrap.releaseExternalResources();
 			bootstrap.shutdown();
 			bootstrap = null;
