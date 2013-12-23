@@ -42,7 +42,7 @@ public class MessageClient {
 	public void sendMessage(Message msg) {
 		channel.write(msg);
 	}
-
+	
 	public void shutdown() {
 		if (bootstrap != null) {
 			channel.close().awaitUninterruptibly();

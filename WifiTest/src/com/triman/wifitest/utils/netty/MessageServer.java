@@ -18,6 +18,7 @@ public class MessageServer {
 	
 	private ServerBootstrap bootstrap;
 	private ConnectionManager connectionManager = ConnectionManager.getInstance();
+	private ChannelFuture channelFuture;
 	
 	public ChannelFuture start(int port, final String name){
 		ChannelFactory factory = new NioServerSocketChannelFactory(
@@ -34,7 +35,8 @@ public class MessageServer {
 		                new ServerMessageHandler(name));
 			}
 		});
-		return bootstrap.bindAsync(new InetSocketAddress(port));
+		channelFuture = bootstrap.bindAsync(new InetSocketAddress(port));
+		return channelFuture;
 	}
 	
 	public void sendBroadcastMessage(Message msg){
@@ -47,13 +49,13 @@ public class MessageServer {
 	
 	public void shutdown(){
 		if(bootstrap != null){
+			if(channelFuture != null){
+				channelFuture.getChannel().close().awaitUninterruptibly();
+				channelFuture = null;
+			}
 			bootstrap.releaseExternalResources();
 			bootstrap.shutdown();
 			bootstrap = null;
 		}
-	}
-	
-	public boolean isOpened(){
-		return bootstrap == null ? false : true;
 	}
 }
