@@ -31,6 +31,7 @@ public class WifiConnectActivity extends Activity implements StateChangeListener
 	private Handler handler = new Handler();
 	private String name;
 	private State state = State.CLOSED;
+	private State prePauseState;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -56,8 +57,8 @@ public class WifiConnectActivity extends Activity implements StateChangeListener
 					break;
 				case OPENED:
 					changeToClosing();
-					wifiConnectManager.setWifiConnectEnabled(false);
 					stopClient();
+					wifiConnectManager.setWifiConnectEnabled(false);
 					break;
 				default:
 					break;
@@ -70,13 +71,16 @@ public class WifiConnectActivity extends Activity implements StateChangeListener
 	protected void onResume() {
 		super.onResume();
 		wifiConnectManager.beginStateChangeListen();
-		changeToOpening();
-		wifiConnectManager.setWifiConnectEnabled(true);
+		if(prePauseState == null || prePauseState == State.OPENED || prePauseState == State.OPENING){
+			changeToOpening();
+			wifiConnectManager.setWifiConnectEnabled(true);
+		}
 	}
 	
 	@Override
 	protected void onPause() {
 		super.onPause();
+		prePauseState = state;
 		wifiConnectManager.endStateChangeListen();
 		wifiConnectManager.setWifiConnectEnabled(false);
 		stopClient();

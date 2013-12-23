@@ -18,8 +18,8 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 public class MessageClient {
 	private ClientBootstrap bootstrap;
 	private Channel channel;
-	
-	public ChannelFuture start(String host, int port, final String name){
+
+	public ChannelFuture start(String host, int port, final String name) {
 		ChannelFactory factory = new NioClientSocketChannelFactory(
 				Executors.newCachedThreadPool(),
 				Executors.newCachedThreadPool());
@@ -29,30 +29,27 @@ public class MessageClient {
 			public ChannelPipeline getPipeline() throws Exception {
 				return Channels.pipeline(
 						new ObjectDecoder(ClassResolvers.cacheDisabled(this
-		                .getClass().getClassLoader())),
-		                new ObjectEncoder(),
-		                new ClientMessageHandler(name));
+								.getClass().getClassLoader())),
+						new ObjectEncoder(), new ClientMessageHandler(name));
 			}
 		});
-		ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(host, port));
+		ChannelFuture channelFuture = bootstrap.connect(new InetSocketAddress(
+				host, port));
 		channel = channelFuture.getChannel();
 		return channelFuture;
 	}
-	
-	public void sendMessage(Message msg){
+
+	public void sendMessage(Message msg) {
 		channel.write(msg);
 	}
-	
-	public void shutdown(){
-		if(bootstrap != null){
-			if(channel != null){
-				channel.disconnect();
-				channel.close();
-			}
+
+	public void shutdown() {
+		if (bootstrap != null) {
+			channel.close().awaitUninterruptibly();
+			channel = null;
 			bootstrap.releaseExternalResources();
 			bootstrap.shutdown();
 			bootstrap = null;
-			channel = null;
 		}
 	}
 }

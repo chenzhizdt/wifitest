@@ -49,16 +49,20 @@ public class ConnectionManager {
 	}
 
 	public void removeConnection(Connection c) {
-		Connection old = connections.remove(c.getId());
+		this.removeConnection(c.getId());
+	}
+	
+	public void removeConnection(int id){
+		Connection old = connections.remove(id);
 		if (old != null) {
-			old.setAttachment(null);
+			if(connectionListener != null){
+				connectionListener.onRemoveConnection(old);
+			}
 		} else {
 			// XXX: error
 		}
-		if(connectionListener != null){
-			connectionListener.onRemoveConnection(old);
-		}
 	}
+	
 	public int getConnectionCount(){
 		return connections.size();
 	}

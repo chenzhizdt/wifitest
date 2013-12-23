@@ -14,7 +14,6 @@ import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.net.wifi.WifiManager.WifiLock;
 import android.util.Log;
 
 public class WifiConnectManager {
@@ -23,7 +22,6 @@ public class WifiConnectManager {
 	
 	private Activity mActivity;
 	private WifiManager wifiManager;
-	private List<ScanResult> wifiList;
 	private List<String> passableAp = new ArrayList<String>();
 	private String connectSSID = "YRCCONNECTION";
 	private boolean isConnected = false;
@@ -31,7 +29,6 @@ public class WifiConnectManager {
 	private WifiStateBroadcastReceiver receiver;
 	private IntentFilter filter;
 	private StateChangeListener stateChangeListener;
-	private WifiLock wifiLock;
 	private String currentSSID;
 	
 	public WifiConnectManager(Activity mActivity){
@@ -42,11 +39,7 @@ public class WifiConnectManager {
 		filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
 		filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
 		filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-		filter.addAction(WifiManager.RSSI_CHANGED_ACTION);
-		filter.addAction(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
 		filter.addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION);
-		filter.addAction(WifiManager.NETWORK_IDS_CHANGED_ACTION);
-		wifiLock = wifiManager.createWifiLock(TAG);
 	}
 
 	public void setStateChangeListener(StateChangeListener stateChangeListener) {
@@ -57,7 +50,6 @@ public class WifiConnectManager {
 		isEnabled = enabled;
 		wifiManager.setWifiEnabled(enabled);
 		if(enabled){
-			wifiLock.acquire();
 			if(wifiManager.isWifiEnabled() || WifiManager.WIFI_STATE_ENABLING == wifiManager.getWifiState()){
 				WifiInfo curConnection = wifiManager.getConnectionInfo();
 				if(curConnection != null && connectSSID.equals(curConnection.getSSID())){
@@ -83,7 +75,6 @@ public class WifiConnectManager {
 			} else {
 				wifiManager.setWifiEnabled(false);
 			}
-			wifiLock.release();
 		}
 	}
 	
@@ -101,7 +92,7 @@ public class WifiConnectManager {
 		}
 	}
 	private void onReceiveNewNetworks(List<ScanResult> wifiList) {
-		passableAp = new ArrayList<String>();
+		passableAp.clear();
 		for (ScanResult result : wifiList) {
 			Log.v(TAG, "热点：" + result.SSID);
 			if ((result.SSID).contains(connectSSID))
@@ -240,8 +231,7 @@ public class WifiConnectManager {
 			} else if(action.equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)){
 				Log.v(TAG, "收到新的扫描结果。");
 				if(isEnabled && passableAp.size() == 0){
-					wifiList = wifiManager.getScanResults();
-					onReceiveNewNetworks(wifiList);
+					onReceiveNewNetworks(wifiManager.getScanResults());
 				}
 			}
 		}

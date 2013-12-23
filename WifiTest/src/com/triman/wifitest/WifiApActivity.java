@@ -29,6 +29,7 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 	private ArrayList<Participant> participants;
 	private ArrayAdapter<Participant> adapter;
 	private State state;
+	private State prePauseState;
 	private Handler handler = new Handler();
 	private MessageServer messageServer;
 	private WifiApManager wifiApManager;
@@ -106,13 +107,16 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 	protected void onResume() {
 		super.onResume();
 		wifiApManager.beginStateChangeListen();
-		changeToOpening();
-		wifiApManager.setWifiApEnabled(true);
+		if(prePauseState == null || prePauseState == State.OPENED || prePauseState == State.OPENING){
+			changeToOpening();
+			wifiApManager.setWifiApEnabled(true);
+		}
 	}
 	
 	@Override
 	protected void onPause() {
 		super.onPause();
+		prePauseState = state;
 		changeToClosed();
 		stopServer();
 		wifiApManager.setWifiApEnabled(false);
@@ -155,17 +159,11 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 		messageServer.shutdown();
 	}
 	
-	private void removeParticipant(int connectionId){
-		Participant old = null;
-		for(Participant p : participants){
-			if(p.getConnectionId() == connectionId){
-				old = p;
-				break;
-			}
-		}
-		if(old != null){
-			participants.remove(old);
+	private void removeParticipant(Participant p){
+		if(participants.remove(p)){
 			adapter.notifyDataSetChanged();
+		} else {
+			//XXX: error
 		}
 	}
 	
@@ -222,21 +220,19 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 			
 			@Override
 			public void run() {
-				removeParticipant(c.getId());
-				Log.v(TAG, "remove " + c.getAttachment().toString());
+				removeParticipant(c.getParticipant());
+				Log.v(TAG, "remove " + c.getParticipant().getName());
 			}
 		});
 	}
 
 	@Override
 	public void onStableConnection(final Connection c) {
-		final Participant p = new Participant(c.getAttachment().toString(), c.getId());
 		handler.post(new Runnable() {
-			
 			@Override
 			public void run() {
-				addParticipant(p);
-				Log.v(TAG, "add " + c.getAttachment().toString());
+				addParticipant(c.getParticipant());
+				Log.v(TAG, "add " + c.getParticipant().getName());
 			}
 		});
 	}
