@@ -21,6 +21,10 @@ public class WifiApManager {
 	public static final int WIFI_AP_STATE_ENABLING = 12;
 	public static final int WIFI_AP_STATE_ENABLED = 13;
 	public static final int WIFI_AP_STATE_FAILED = 14;
+	/**
+	 * 默认的Ap广播名称
+	 */
+	public static final String DEFAULT_SSID = "YRCCONNECTION";
 	
 	private static final String TAG = "WifiApManager";
 	
@@ -29,28 +33,35 @@ public class WifiApManager {
 	private IntentFilter filter;
 	private int state = WIFI_AP_STATE_DISABLED;
 	private Activity mActivity;
-	private StateChangeListener listener;
+	private WifiApEventListener listener;
 	private WifiConfiguration apConfig;
 	
 	public WifiApManager(Activity mActivity){
+		this(mActivity, null);
+	}
+	
+	public WifiApManager(Activity mActivity, WifiConfiguration apConfig){
 		this.mActivity = mActivity;
 		this.receiver = new WifiApBroadcastReceiver();
 		this.filter = new IntentFilter(WIFI_AP_STATE_CHANGED_ACTION);
 		wifiManager = (WifiManager) mActivity.getSystemService(Context.WIFI_SERVICE);
-		apConfig = new WifiConfiguration();
-		apConfig.SSID = "YRCCONNECTION";
-	}
-	
-	public void setStateChangeListener(StateChangeListener listener){
-		if(listener != null){
-			this.listener = listener;
+		if(apConfig == null){
+			this.apConfig = new WifiConfiguration();
+			this.apConfig.SSID = "YRCCONNECTION";
 		}
 	}
 	
-	public void removeStateChangeListener(){
-		if(listener != null){
-			listener = null;
-		}
+	public WifiConfiguration getApConfig() {
+		return apConfig;
+	}
+
+	public void setApConfig(WifiConfiguration apConfig) {
+		if(apConfig != null)
+			this.apConfig = apConfig;
+	}
+
+	public void setListener(WifiApEventListener listener){
+		this.listener = listener;
 	}
 	
 	public boolean setWifiApEnabled(boolean enabled) {
@@ -58,6 +69,7 @@ public class WifiApManager {
 			wifiManager.setWifiEnabled(false);
 		}
 		try {
+			//由于api中没有导出设置WifiAp启动的方法，所以需要利用java的反射机制去获取该方法
 			Method method = wifiManager.getClass().getMethod(
 					"setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
 			return (Boolean) method.invoke(wifiManager, apConfig, enabled);
@@ -65,12 +77,14 @@ public class WifiApManager {
 			return false;
 		}
 	}
-	
-	public void beginStateChangeListen(){
+	/**
+	 * 状态变化事件的监听需要手动注册
+	 */
+	public void registerListener(){
 		mActivity.registerReceiver(receiver, filter);
 	}
 	
-	public void endStateChangeListen(){
+	public void unregisterListener(){
 		mActivity.unregisterReceiver(receiver);
 	}
 	
@@ -89,27 +103,32 @@ public class WifiApManager {
 			case WIFI_AP_STATE_DISABLED:
 				str = "已经关闭";
 				state = WIFI_AP_STATE_DISABLED;
-				listener.onDisabled();
+				if(listener != null)
+					listener.onDisabled();
 				break;
 			case WIFI_AP_STATE_DISABLING:
 				str = "正在关闭";
 				state = WIFI_AP_STATE_DISABLING;
-				listener.onDisabling();
+				if(listener != null)
+					listener.onDisabling();
 				break;
 			case WIFI_AP_STATE_ENABLED:
 				str = "已经打开";
 				state = WIFI_AP_STATE_ENABLED;
-				listener.onEnabled();
+				if(listener != null)
+					listener.onEnabled();
 				break;
 			case WIFI_AP_STATE_ENABLING:
 				str = "正在打开";
 				state = WIFI_AP_STATE_ENABLING;
-				listener.onEnabling();
+				if(listener != null)
+					listener.onEnabling();
 				break;
 			case WIFI_AP_STATE_FAILED:
 				str = "打开失败";
 				state = WIFI_AP_STATE_FAILED;
-				listener.onFailed();
+				if(listener != null)
+					listener.onFailed();
 				break;
 			default:
 				break;
@@ -119,33 +138,10 @@ public class WifiApManager {
 		
 		private void stateChangelog(String message){
 			if(message != null){
-				Log.v(TAG, "Wifi Ap " + message);
+				Log.v(TAG, "热点：" + apConfig.SSID +" " + message);
 			} else {
 				Log.v(TAG, "Message must be not null!");
 			}
 		}
-	}
-	
-	public interface StateChangeListener {
-		/**
-		 * WifiAp正式启动时触发该事件
-		 */
-		public void onEnabled();
-		/**
-		 * WifiAp正在启动时触发该事件
-		 */
-		public void onEnabling();
-		/**
-		 * WifiAp失败时触发该事件
-		 */
-		public void onFailed();
-		/**
-		 * WifiAp关闭时触发该事件
-		 */
-		public void onDisabled();
-		/**
-		 * WifiAp正在关闭时触发该事件
-		 */
-		public void onDisabling();
 	}
 }

@@ -2,7 +2,6 @@ package com.triman.wifitest;
 
 import org.jboss.netty.channel.ChannelFuture;
 
-import com.triman.wifitest.WifiConnectManager.StateChangeListener;
 import com.triman.wifitest.utils.netty.MessageClient;
 
 import android.app.Activity;
@@ -14,7 +13,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
-public class WifiConnectActivity extends Activity implements StateChangeListener{
+public class WifiConnectActivity extends Activity{
 	
 	private static final String TAG = "WifiConnectActivity";
 	
@@ -39,7 +38,7 @@ public class WifiConnectActivity extends Activity implements StateChangeListener
 		setContentView(R.layout.activity_wifi_connect);
 		
 		wifiConnectManager = new WifiConnectManager(this);
-		wifiConnectManager.setStateChangeListener(this);
+		wifiConnectManager.setListener(new ConnectEventListener());
 		
 		connect = (Button) findViewById(R.id.connect);
 		
@@ -70,7 +69,7 @@ public class WifiConnectActivity extends Activity implements StateChangeListener
 	@Override
 	protected void onResume() {
 		super.onResume();
-		wifiConnectManager.beginStateChangeListen();
+		wifiConnectManager.registerListener();
 		if(prePauseState == null || prePauseState == State.OPENED || prePauseState == State.OPENING){
 			changeToOpening();
 			wifiConnectManager.setWifiConnectEnabled(true);
@@ -81,7 +80,7 @@ public class WifiConnectActivity extends Activity implements StateChangeListener
 	protected void onPause() {
 		super.onPause();
 		prePauseState = state;
-		wifiConnectManager.endStateChangeListen();
+		wifiConnectManager.unregisterListener();
 		wifiConnectManager.setWifiConnectEnabled(false);
 		stopClient();
 		changeToClosed();
@@ -149,40 +148,42 @@ public class WifiConnectActivity extends Activity implements StateChangeListener
 		messageClient.shutdown();
 	}
 
-	@Override
-	public void onWifiEnabled() {
-		Log.v(TAG, "WifiEnabled");
-	}
-
-	@Override
-	public void onWifiDisabled() {
-		if(state == State.CLOSING){
-			changeToClosed();
+	private class ConnectEventListener extends BaseWifiConnectEventListener{
+		@Override
+		public void onWifiEnabled() {
+			Log.v(TAG, "WifiEnabled");
 		}
-		Log.v(TAG, "WifiDisabled");
-	}
 
-	@Override
-	public void onWifiConnectEnabled() {
-		if(state == State.OPENING){
-			Thread t = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					startClient();
-				}
-			});
-			t.start();
+		@Override
+		public void onWifiDisabled() {
+			if(state == State.CLOSING){
+				changeToClosed();
+			}
+			Log.v(TAG, "WifiDisabled");
 		}
-		Log.v(TAG, "WifiConnectEnabled");
-	}
 
-	@Override
-	public void onWifiConnectDisabled() {
-		if(state == State.OPENED){
-			stopClient();
-			changeToClosing();
-			wifiConnectManager.setWifiConnectEnabled(false);
+		@Override
+		public void onWifiConnectEnabled() {
+			if(state == State.OPENING){
+				Thread t = new Thread(new Runnable() {
+					@Override
+					public void run() {
+						startClient();
+					}
+				});
+				t.start();
+			}
+			Log.v(TAG, "WifiConnectEnabled");
 		}
-		Log.v(TAG, "WifiConnectDisabled");
+
+		@Override
+		public void onWifiConnectDisabled() {
+			if(state == State.OPENED){
+				stopClient();
+				changeToClosing();
+				wifiConnectManager.setWifiConnectEnabled(false);
+			}
+			Log.v(TAG, "WifiConnectDisabled");
+		}
 	}
 }

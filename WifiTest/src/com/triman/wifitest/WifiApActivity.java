@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 import org.jboss.netty.channel.ChannelFuture;
 
-import com.triman.wifitest.WifiApManager.StateChangeListener;
 import com.triman.wifitest.utils.netty.Connection;
 import com.triman.wifitest.utils.netty.ConnectionListener;
 import com.triman.wifitest.utils.netty.ConnectionManager;
@@ -21,7 +20,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 
-public class WifiApActivity extends Activity implements StateChangeListener, ConnectionListener{
+public class WifiApActivity extends Activity implements ConnectionListener{
 	
 	private static final String TAG = "WifiApActivity";
 	
@@ -55,7 +54,7 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 		state = State.CLOSED;
 		messageServer = new MessageServer();
 		wifiApManager = new WifiApManager(this);
-		wifiApManager.setStateChangeListener(this);
+		wifiApManager.setListener(new ApEventListener());
 		ConnectionManager.getInstance().setConnectionListener(this);
 		name = getIntent().getStringExtra(MainActivity.EXTRA_NAME);
 		
@@ -106,7 +105,7 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 	@Override
 	protected void onResume() {
 		super.onResume();
-		wifiApManager.beginStateChangeListen();
+		wifiApManager.registerListener();
 		if(prePauseState == null || prePauseState == State.OPENED || prePauseState == State.OPENING){
 			changeToOpening();
 			wifiApManager.setWifiApEnabled(true);
@@ -120,7 +119,7 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 		changeToClosed();
 		stopServer();
 		wifiApManager.setWifiApEnabled(false);
-		wifiApManager.endStateChangeListen();
+		wifiApManager.unregisterListener();
 	}
 	
 	private void startServer(){
@@ -172,43 +171,40 @@ public class WifiApActivity extends Activity implements StateChangeListener, Con
 		adapter.notifyDataSetChanged();
 	}
 
-	@Override
-	public void onEnabled() {
-		if(state == State.OPENING){
-			Thread t = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					startServer();
-				}
-			});
-			t.start();
+	private class ApEventListener extends BaseWifiApEventListener{
+		@Override
+		public void onEnabled() {
+			if(state == State.OPENING){
+				Thread t = new Thread(new Runnable() {
+					@Override
+					public void run() {
+						startServer();
+					}
+				});
+				t.start();
+			}
 		}
-	}
 
-	@Override
-	public void onEnabling() {
-		
-	}
-
-	@Override
-	public void onFailed() {
-		changeToClosed();
-	}
-
-	@Override
-	public void onDisabled() {
-		if(state == State.CLOSING)
+		@Override
+		public void onFailed() {
 			changeToClosed();
-	}
+		}
 
-	@Override
-	public void onDisabling() {
-		if(state == State.OPENED){
-			changeToClosing();
-			stopServer();
+		@Override
+		public void onDisabled() {
+			if(state == State.CLOSING)
+				changeToClosed();
+		}
+
+		@Override
+		public void onDisabling() {
+			if(state == State.OPENED){
+				changeToClosing();
+				stopServer();
+			}
 		}
 	}
-
+	
 	@Override
 	public void onNewConnection(Connection c) {
 		
