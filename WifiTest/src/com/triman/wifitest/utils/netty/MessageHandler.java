@@ -27,7 +27,7 @@ public class MessageHandler extends SimpleChannelHandler{
 		Message msg = (Message) e.getMessage();
 		Log.v(TAG,"I received message: " + msg.getMessage());
 		if(msg.getType() == Message.REQUEST){
-			e.getChannel().write(new Message(id + " received!", Message.RESPONSE));
+			e.getChannel().write(new Message(id + " received!", Message.RESPONSE, 0));
 		}
 	}
 	

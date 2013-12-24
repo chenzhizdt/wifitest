@@ -17,8 +17,10 @@ import org.jboss.netty.handler.codec.serialization.ObjectEncoder;
 public class MessageServer {
 	
 	private ServerBootstrap bootstrap;
+	private ConnectionManager connectionManager = ConnectionManager.getInstance();
+	private ChannelFuture channelFuture;
 	
-	public ChannelFuture start(int port){
+	public ChannelFuture start(int port, final String name){
 		ChannelFactory factory = new NioServerSocketChannelFactory(
 				Executors.newCachedThreadPool(),
 				Executors.newCachedThreadPool());
@@ -30,14 +32,15 @@ public class MessageServer {
 						new ObjectDecoder(ClassResolvers.cacheDisabled(this
 		                .getClass().getClassLoader())),
 		                new ObjectEncoder(),
-		                new ServerMessageHandler("Server"));
+		                new ServerMessageHandler(name));
 			}
 		});
-		return bootstrap.bindAsync(new InetSocketAddress(port));
+		channelFuture = bootstrap.bindAsync(new InetSocketAddress(port));
+		return channelFuture;
 	}
 	
 	public void sendBroadcastMessage(Message msg){
-		int n = ConnectionManager.getInstance().getConnectionCount();
+		int n = connectionManager.getConnectionCount();
 		while(n > 0){
 			ConnectionManager.getInstance().getConnection(n).getChannel().write(msg);
 			n--;
@@ -46,13 +49,13 @@ public class MessageServer {
 	
 	public void shutdown(){
 		if(bootstrap != null){
+			if(channelFuture != null){
+				channelFuture.getChannel().close().awaitUninterruptibly();
+				channelFuture = null;
+			}
 			bootstrap.releaseExternalResources();
 			bootstrap.shutdown();
 			bootstrap = null;
 		}
-	}
-	
-	public boolean isOpened(){
-		return bootstrap == null ? false : true;
 	}
 }

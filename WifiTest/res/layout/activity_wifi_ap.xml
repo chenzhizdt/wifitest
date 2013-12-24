@@ -8,11 +8,18 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context=".WifiApActivity" >
-    
+
+    <ListView
+        android:id="@+id/lv_participants"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" >
+    </ListView>
+
     <Button
-        android:id="@+id/connect"
+        android:id="@+id/btn_start_ap"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/connect" />
+        android:text="@string/start" />
 
 </LinearLayout>

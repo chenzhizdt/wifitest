@@ -9,12 +9,25 @@ public class Message implements Serializable{
 	 */
 	private static final long serialVersionUID = 5910155568125389350L;
 	
-	public static final int REQUEST = 0;
-	public static final int RESPONSE = 1;
+	public static final int NAME_QUERY = 0;
+	public static final int NAME_QUERY_RESPONSE = 1;
+	public static final int NORMAL_MESSAGE = 2;
+	public static final int REQUEST = 3;
+	public static final int RESPONSE = 4;
 	
 	private String message;
 	
 	private int type;
+	
+	private int connectionId;
+
+	public int getConnectionId() {
+		return connectionId;
+	}
+
+	public void setConnectionId(int connectionId) {
+		this.connectionId = connectionId;
+	}
 
 	public int getType() {
 		return type;
@@ -32,7 +45,7 @@ public class Message implements Serializable{
 		this.message = message;
 	}
 	
-	public Message(String msg, int type){
+	public Message(String msg, int type, int connectionId){
 		this.message = msg;
 		this.type = type;
 	}
